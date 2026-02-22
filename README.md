@@ -66,7 +66,7 @@ server.js        — the relay server
 backup.js        — manual backup script for the database
 package.json     — server dependencies
 ```
-
+Download just RedRabbit.html to only use the app.
 The client is fully self-contained. You can save it locally, host it anywhere static, or just open it directly in the browser.
 
 ---
