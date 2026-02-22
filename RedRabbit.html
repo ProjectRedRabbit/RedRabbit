@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RedRabbit.</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:monospace; }
+
+        body {
+            background-color: white;
+            color: black;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            position: absolute;
+            top: 10px; left: 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px 20px;
+            width: 100%;
+        }
+
+        .screen { display: none; flex-direction: column; gap: 20px; }
+        .screen.active { display: flex; }
+
+        h2, h3, h4 { color: black; margin-bottom: 10px; }
+
+        input, textarea, select, button {
+            padding: 10px;
+            border: 1px solid black;
+            background: white;
+            color: black;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        button {
+            cursor: pointer;
+            background: black;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+        }
+        button:hover  { background: #333; }
+        button:disabled { background: #999; cursor: not-allowed; }
+        button.danger { background: #d32f2f; }
+        button.danger:hover { background: #b71c1c; }
+
+        .message {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f9f9f9;
+        }
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .message-content { word-wrap: break-word; }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+            border: 1px solid black;
+        }
+        .messages { flex: 1; overflow-y: auto; padding: 10px; }
+        .input-area { display: flex; border-top: 1px solid black; }
+        .input-area textarea {
+            flex: 1; resize: none; border: none; outline: none;
+            min-height: 60px; max-height: 120px;
+        }
+
+        .server-list { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
+        .server-item {
+            display: flex; align-items: center; gap: 5px;
+            padding: 5px; border: 1px solid #ccc;
+        }
+
+        .vault-info {
+            background: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+
+        .hidden  { display: none !important; }
+        .flex    { display: flex; gap: 10px; align-items: center; }
+        .status  { font-size: 12px; color: #666; font-style: italic; }
+
+        .controls { display: flex; justify-content: space-between; margin: 10px 0; }
+
+        .tabs { display: flex; border-bottom: 1px solid black; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px; cursor: pointer;
+            border: 1px solid transparent; border-bottom: none; margin-bottom: -1px;
+        }
+        .tab.active { border-color: black; background: white; }
+
+        .loading { color: #666; text-align: center; padding: 20px; }
+
+        .config-panel {
+            border: 1px solid #ccc; padding: 15px;
+            margin-bottom: 20px; background: #fafafa;
+        }
+        .config-section { margin-bottom: 15px; }
+
+        .invite-token {
+            word-break: break-all; font-size: 11px;
+            background: #eee; padding: 6px;
+            border: 1px solid #ccc; cursor: pointer; user-select: all;
+        }
+        .invite-token:active { background: #ddd; }
+
+        .warning-text {
+            background: #fff3cd; border: 1px solid #856404;
+            padding: 10px; margin: 10px 0;
+            color: #856404; font-size: 13px; line-height: 1.4;
+        }
+
+        .error-text {
+            background: #fdecea; border: 1px solid #d32f2f;
+            padding: 10px; margin: 10px 0;
+            color: #b71c1c; font-size: 13px; line-height: 1.4;
+        }
+
+        .success-text {
+            background: #e8f5e9; border: 1px solid #388e3c;
+            padding: 10px; margin: 10px 0;
+            color: #1b5e20; font-size: 13px;
+        }
+
+        .nuke-note {
+            background: #fdecea; border: 1px solid #d32f2f;
+            color: #b71c1c; font-size: 12px;
+            padding: 8px 10px; margin-top: 8px; line-height: 1.5;
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: white; padding: 30px;
+            max-width: 500px; width: 90%;
+            border: 2px solid black;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .nuke-progress {
+            background: #111; color: #0f0;
+            font-size: 12px; padding: 12px; margin-top: 12px;
+            white-space: pre-wrap;
+            max-height: 160px; overflow-y: auto; display: none;
+        }
+        .nuke-progress.visible { display: block; }
+
+        #createVaultBtn.loading::after { content: ' …'; }
+    </style>
+</head>
+<body>
+<div class="app-header">RedRabbit.</div>
+
+<div class="container">
+
+    <div id="setupScreen" class="screen active">
+        <h2>Welcome to RedRabbit</h2>
+        <p>Enter your display name to begin.</p>
+        <div class="config-panel">
+            <div class="config-section">
+                <h4>User Profile</h4>
+                <input type="text" id="userName" placeholder="Enter your display name" style="width:300px;">
+            </div>
+            <button id="startApp">Continue</button>
+            <div id="setupError" class="error-text hidden"></div>
+        </div>
+        <div class="config-panel">
+            <div class="config-section">
+                <h4>Relay Servers</h4>
+                <p>Add server URLs (one per line):</p>
+                <textarea id="serverUrls" rows="4"
+                    placeholder="https://relay1.example.com&#10;https://relay2.example.com">http://localhost:3000</textarea>
+                <p class="status">Messages will be relayed through all listed servers.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainScreen" class="screen">
+        <h2>Main Menu</h2>
+        <div class="vault-info">
+            <p>User: <span id="currentUserName"></span></p>
+            <p>User ID: <span id="currentUserId"></span></p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="vault">Vaults</div>
+            <div class="tab" data-tab="config">Configuration</div>
+        </div>
+
+        <div id="vaultTab" class="tab-content">
+            <div id="vaultActionError" class="error-text hidden"></div>
+
+            <div style="display:flex; gap:20px; margin-bottom:30px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:220px;">
+                    <h3>Join Vault</h3>
+                    <div style="margin:15px 0;">
+                        <input type="text" id="joinVaultId"
+                            placeholder="Paste vault invite token (RRv1_...)"
+                            style="width:100%; margin-bottom:10px;">
+                        <button id="joinVaultBtn">Join Vault</button>
+                    </div>
+                </div>
+                <div style="flex:1; min-width:220px;">
+                    <h3>Create Vault</h3>
+                    <div style="margin:15px 0;">
+                        <select id="vaultType" style="width:100%; margin-bottom:10px;">
+                            <option value="private">Private Vault (2 people max)</option>
+                            <option value="public">Public Vault (unlimited)</option>
+                        </select>
+                        <input type="text" id="vaultName"
+                            placeholder="Vault name"
+                            style="width:100%; margin-bottom:10px;" class="hidden">
+                        <button id="createVaultBtn">Create Vault</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-panel">
+                <h4>Your Vaults</h4>
+                <div id="vaultList"></div>
+            </div>
+        </div>
+
+        <div id="configTab" class="tab-content hidden">
+            <div class="config-panel">
+                <div class="config-section">
+                    <h4>Relay Servers</h4>
+                    <div id="serverList" class="server-list"></div>
+                    <div class="flex">
+                        <input type="text" id="newServerUrl" placeholder="New server URL" style="flex:1;">
+                        <button id="addServerBtn">Add Server</button>
+                    </div>
+                </div>
+                <div class="config-section">
+                    <h4>Danger Zone</h4>
+                    <div class="warning-text">
+                        <strong>⚠ WARNING:</strong> The NUKE button permanently deletes:
+                        <ul style="margin-top:5px; margin-left:20px;">
+                            <li>Your identity keys and user ID</li>
+                            <li>All vault memberships and encryption keys</li>
+                            <li>All locally stored messages (IndexedDB)</li>
+                            <li>All vault data from relay servers</li>
+                        </ul>
+                        This action <strong>CANNOT BE UNDONE</strong>.
+                    </div>
+                    <button id="nukeBtn" class="danger">NUKE EVERYTHING</button>
+                    <div class="nuke-note hidden" id="nukeNote">
+                        ☢ You clicked NUKE. A confirmation dialog will open.
+                        Once confirmed — <strong>all data is permanently gone.</strong>
+                        Keys, messages, vaults. No recovery possible.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chatScreen" class="screen">
+        <div class="controls">
+            <button id="backToMain">← Back</button>
+            <div style="flex:1; text-align:center;">
+                <h3 id="currentVaultName">Vault</h3>
+                <p class="status" id="vaultStatus"></p>
+            </div>
+            <button id="leaveVault" class="danger">Leave Vault</button>
+        </div>
+
+        <div class="chat-container">
+            <div id="messages" class="messages">
+                <div class="loading">Loading messages…</div>
+            </div>
+            <div class="input-area">
+                <textarea id="messageInput" placeholder="Type your encrypted message here…"></textarea>
+                <button id="sendMessage">Send</button>
+            </div>
+        </div>
+
+        <div class="vault-info">
+            <p>Vault ID: <span id="displayVaultId"></span></p>
+            <p style="margin-top:6px;">
+                Invite Token
+                <span style="font-size:10px; color:#999;">(click to copy — share this to invite others)</span>:
+            </p>
+            <div id="displayVaultToken" class="invite-token" title="Click to copy"></div>
+            <p style="margin-top:6px;">Participants: <span id="participants">—</span></p>
+        </div>
+    </div>
+
+</div>
+
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3 id="confirmTitle">Confirm</h3>
+        <p id="confirmMessage" style="margin:15px 0; white-space:pre-wrap;"></p>
+        <div style="display:flex; gap:10px; margin-top:20px;" id="confirmBtns">
+            <button id="confirmYes" class="danger" style="flex:1;">Yes, I understand</button>
+            <button id="confirmNo" style="flex:1;">Cancel</button>
+        </div>
+        <div class="nuke-progress" id="nukeProgress"></div>
+    </div>
+</div>
+
+<script>
+class CryptoEngine {
+
+    buf2b64(buf) {
+        return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    }
+    b642buf(b64) {
+        const bin = atob(b64);
+        const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return out.buffer;
+    }
+    concat(...bufs) {
+        const total = bufs.reduce((s, b) => s + b.byteLength, 0);
+        const out   = new Uint8Array(total);
+        let off = 0;
+        for (const b of bufs) { out.set(new Uint8Array(b), off); off += b.byteLength; }
+        return out.buffer;
+    }
+    encode(s)  { return new TextEncoder().encode(s); }
+    decode(b)  { return new TextDecoder().decode(b); }
+
+    async isSupported() {
+        try {
+            await crypto.subtle.generateKey({ name: 'X25519' },  false, ['deriveBits']);
+            await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+            return true;
+        } catch(_) { return false; }
+    }
+
+    async generateIdentityKeys() {
+        const kp       = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+        const pubRaw   = await crypto.subtle.exportKey('raw',   kp.publicKey);
+        const privPkcs = await crypto.subtle.exportKey('pkcs8', kp.privateKey);
+        return {
+            publicKey:     kp.publicKey,
+            privateKey:    kp.privateKey,
+            publicKeyB64:  this.buf2b64(pubRaw),
+            privateKeyB64: this.buf2b64(privPkcs),
+        };
+    }
+    async importEd25519Public(b64) {
+        return crypto.subtle.importKey('raw',   this.b642buf(b64), { name: 'Ed25519' }, true,  ['verify']);
+    }
+    async importEd25519Private(b64) {
+        return crypto.subtle.importKey('pkcs8', this.b642buf(b64), { name: 'Ed25519' }, false, ['sign']);
+    }
+    async deriveUserId(pubKeyB64) {
+        const hash = await crypto.subtle.digest('SHA-256', this.b642buf(pubKeyB64));
+        return this.buf2b64(hash).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    async generateX25519KeyPair() {
+        const kp       = await crypto.subtle.generateKey({ name: 'X25519' }, true, ['deriveBits']);
+        const pubRaw   = await crypto.subtle.exportKey('raw',   kp.publicKey);
+        const privPkcs = await crypto.subtle.exportKey('pkcs8', kp.privateKey);
+        return {
+            publicKey:     kp.publicKey,
+            privateKey:    kp.privateKey,
+            publicKeyB64:  this.buf2b64(pubRaw),
+            privateKeyB64: this.buf2b64(privPkcs),
+        };
+    }
+    async importX25519Public(b64) {
+        return crypto.subtle.importKey('raw',   this.b642buf(b64), { name: 'X25519' }, true,  []);
+    }
+    async importX25519Private(b64) {
+        return crypto.subtle.importKey('pkcs8', this.b642buf(b64), { name: 'X25519' }, false, ['deriveBits']);
+    }
+
+    async hkdfAesKey(ikm, salt, info) {
+        const base = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveKey']);
+        return crypto.subtle.deriveKey(
+            { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(salt), info: this.encode(info) },
+            base,
+            { name: 'AES-GCM', length: 256 },
+            false, ['encrypt', 'decrypt']
+        );
+    }
+
+    async encryptMessage(vaultXPubB64, plaintext, sigPriv, sigPubB64) {
+        const eph      = await this.generateX25519KeyPair();
+        const vaultPub = await this.importX25519Public(vaultXPubB64);
+        const shared   = await crypto.subtle.deriveBits({ name: 'X25519', public: vaultPub }, eph.privateKey, 256);
+        const ephRaw   = this.b642buf(eph.publicKeyB64);
+        const msgKey   = await this.hkdfAesKey(shared, ephRaw, 'RRv1-msg');
+        const iv       = crypto.getRandomValues(new Uint8Array(12));
+        const ct       = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, msgKey, this.encode(plaintext));
+        const sigData  = this.concat(ephRaw, iv.buffer, ct);
+        const sig      = await crypto.subtle.sign({ name: 'Ed25519' }, sigPriv, sigData);
+        return { v: 1, eph: eph.publicKeyB64, iv: this.buf2b64(iv), ct: this.buf2b64(ct), sig: this.buf2b64(sig), spk: sigPubB64 };
+    }
+
+    async decryptMessage(vaultXPrivB64, blob) {
+        try {
+            if (!blob || blob.v !== 1) return null;
+            const vaultPriv = await this.importX25519Private(vaultXPrivB64);
+            const ephPub    = await this.importX25519Public(blob.eph);
+            const shared    = await crypto.subtle.deriveBits({ name: 'X25519', public: ephPub }, vaultPriv, 256);
+            const ephRaw    = this.b642buf(blob.eph);
+            const msgKey    = await this.hkdfAesKey(shared, ephRaw, 'RRv1-msg');
+            const iv        = this.b642buf(blob.iv);
+            const ct        = this.b642buf(blob.ct);
+            const plain     = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(iv) }, msgKey, ct);
+            let verified = false;
+            try {
+                const senderPub = await this.importEd25519Public(blob.spk);
+                verified = await crypto.subtle.verify(
+                    { name: 'Ed25519' }, senderPub,
+                    this.b642buf(blob.sig), this.concat(ephRaw, iv, ct)
+                );
+            } catch(_) {}
+            return { plaintext: this.decode(plain), senderPubKey: blob.spk, verified };
+        } catch(_) { return null; }
+    }
+}
+
+class RedRabbit {
+    constructor() {
+        this.cry = new CryptoEngine();
+
+        this.userId               = null;
+        this.userName             = null;
+        this.identityPublicKeyB64  = null;
+        this.identityPrivateKey    = null;
+        this.identityPrivateKeyB64 = null;
+
+        this.currentVault      = null;
+        this.seenMsgIds        = new Set();
+        this.servers           = ['http://localhost:3000'];
+        this.pollInterval      = null;
+        this.db                = null;
+        this.pendingAction     = null;
+        this.lastSyncTimestamp = 0;
+        this._pollInFlight     = false;
+
+        this.init();
+    }
+
+    async init() {
+        const ok = await this.cry.isSupported();
+        if (!ok) {
+            document.body.innerHTML = `
+              <div style="padding:40px;font-family:monospace;max-width:600px;margin:0 auto;">
+                <h2>RedRabbit.</h2>
+                <p style="margin-top:20px;"><strong>Browser not supported.</strong></p>
+                <p style="margin-top:10px;">Requires X25519 + Ed25519 (Chrome 113+, Firefox 130+, Safari 17+, Edge 113+).</p>
+              </div>`;
+            return;
+        }
+
+        const dbOk = await this.initDB();
+        if (!dbOk) {
+            document.body.innerHTML = `
+              <div style="padding:40px;font-family:monospace;max-width:600px;margin:0 auto;">
+                <h2>RedRabbit.</h2>
+                <p style="margin-top:20px;"><strong>Storage unavailable.</strong></p>
+                <p style="margin-top:10px;">
+                  RedRabbit needs IndexedDB. Please check your browser settings
+                  (e.g. not in private/incognito mode with strict settings, not a file:// URL).
+                </p>
+                <p style="margin-top:10px;">If you have the page open in another tab, close that tab and reload.</p>
+                <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px;
+                  cursor:pointer; background:black; color:white; border:none; font-family:monospace;">
+                  Reload
+                </button>
+              </div>`;
+            return;
+        }
+
+        await this.loadServers();
+        this.bindEvents();
+
+        try {
+            const user = await this.getStoredUser();
+            if (user && user.identityPublicKey) {
+                this.userId               = user.id;
+                this.userName             = user.name;
+                this.identityPublicKeyB64  = user.identityPublicKey;
+                this.identityPrivateKeyB64 = user.identityPrivateKey;
+                this.identityPrivateKey    = await this.cry.importEd25519Private(user.identityPrivateKey);
+                this.showScreen('main');
+                this.updateUserDisplay();
+                this.loadVaults();
+            }
+        } catch(e) {
+            console.error('init load-user error:', e);
+        }
+    }
+
+    async initDB() {
+        return new Promise((resolve) => {
+            let resolved = false;
+            const done = (val) => { if (!resolved) { resolved = true; resolve(val); } };
+
+            let req;
+            try {
+                req = indexedDB.open('RedRabbitDB', 5);
+            } catch(e) {
+                console.error('indexedDB.open threw:', e);
+                done(false);
+                return;
+            }
+
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                
+                for (const name of [...db.objectStoreNames]) {
+                    try { db.deleteObjectStore(name); } catch(_) {}
+                }
+
+                try {
+                    const msgs = db.createObjectStore('messages', { keyPath: 'id' });
+                    msgs.createIndex('vault',     'vaultId',   { unique: false });
+                    msgs.createIndex('timestamp', 'timestamp', { unique: false });
+
+                    db.createObjectStore('vaults',   { keyPath: 'id'  });
+                    db.createObjectStore('user',     { keyPath: 'id'  });
+                    db.createObjectStore('settings', { keyPath: 'key' });
+                } catch(e) {
+                    console.error('Store creation failed:', e);
+                    
+                }
+            };
+
+            req.onsuccess = (e) => {
+                this.db = e.target.result;
+
+                this.db.onversionchange = () => {
+                    this.db.close();
+                    alert('Database updated in another tab. Reloading…');
+                    location.reload();
+                };
+
+                done(true);
+            };
+
+            req.onerror = (e) => {
+                console.error('DB open error:', e.target.error);
+                done(false);
+            };
+
+            req.onblocked = () => {
+                
+                console.warn('DB upgrade blocked — another tab has an older version open.');
+                done(false);
+            };
+
+            setTimeout(() => done(false), 8000);
+        });
+    }
+
+    bindEvents() {
+        document.getElementById('startApp').onclick       = () => this.setupUser();
+        document.getElementById('joinVaultBtn').onclick   = () => this.joinVault();
+        document.getElementById('createVaultBtn').onclick = () => this.createVault();
+
+        document.getElementById('vaultType').onchange = (e) => {
+            document.getElementById('vaultName')
+                .classList.toggle('hidden', e.target.value !== 'public');
+        };
+
+        document.getElementById('addServerBtn').onclick   = () => this.addServer();
+
+        document.getElementById('nukeBtn').onclick = () => {
+            document.getElementById('nukeNote').classList.remove('hidden');
+            setTimeout(() => this.confirmNuke(), 600);
+        };
+
+        document.getElementById('backToMain').onclick = () => this.leaveVaultSession();
+        document.getElementById('leaveVault').onclick = () => this.leaveVaultSession();
+        document.getElementById('sendMessage').onclick   = () => this.sendMessage();
+        document.getElementById('messageInput').onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
+        };
+
+        document.getElementById('displayVaultToken').onclick = () => {
+            const tok = document.getElementById('displayVaultToken').textContent.trim();
+            if (tok) {
+                navigator.clipboard.writeText(tok)
+                    .then(() => alert('Invite token copied to clipboard!'))
+                    .catch(() => {});
+            }
+        };
+
+        document.querySelectorAll('.tab').forEach(t => {
+            t.onclick = () => this.switchTab(t.dataset.tab);
+        });
+
+        document.getElementById('confirmNo').onclick  = () => this.hideModal();
+        document.getElementById('confirmYes').onclick = () => this.executeConfirmedAction();
+    }
+
+    async setupUser() {
+        const userName = document.getElementById('userName').value.trim();
+        const servers  = document.getElementById('serverUrls').value.trim()
+                             .split('\n').map(s => s.trim()).filter(Boolean);
+
+        this.showSetupError('');
+
+        if (!userName) { this.showSetupError('Please enter a display name.'); return; }
+        if (!servers.length) { this.showSetupError('Please add at least one relay server URL.'); return; }
+
+        const btn = document.getElementById('startApp');
+        btn.disabled = true;
+        btn.textContent = 'Setting up…';
+
+        try {
+            const idKeys = await this.cry.generateIdentityKeys();
+            const userId = await this.cry.deriveUserId(idKeys.publicKeyB64);
+
+            this.userId               = userId;
+            this.userName             = userName;
+            this.identityPublicKeyB64  = idKeys.publicKeyB64;
+            this.identityPrivateKey    = idKeys.privateKey;
+            this.identityPrivateKeyB64 = idKeys.privateKeyB64;
+            this.servers               = servers;
+
+            await this.saveUser({
+                id:                 userId,
+                name:               userName,
+                identityPublicKey:  idKeys.publicKeyB64,
+                identityPrivateKey: idKeys.privateKeyB64,
+            });
+            await this.saveSetting('servers', servers.join('\n'));
+
+            this.showScreen('main');
+            this.updateUserDisplay();
+            this.updateServerList();
+        } catch(e) {
+            console.error('setupUser error:', e);
+            this.showSetupError('Setup failed: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Continue';
+        }
+    }
+
+    showSetupError(msg) {
+        const el = document.getElementById('setupError');
+        if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+        else       el.classList.add('hidden');
+    }
+
+    showVaultError(msg) {
+        const el = document.getElementById('vaultActionError');
+        if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+        else       el.classList.add('hidden');
+    }
+
+    showScreen(screen) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screen + 'Screen').classList.add('active');
+        if (screen === 'main') {
+            this.stopPolling();
+            this.currentVault      = null;
+            this.lastSyncTimestamp = 0;
+            this.seenMsgIds        = new Set();
+            this.loadVaults();
+        }
+    }
+
+    updateUserDisplay() {
+        document.getElementById('currentUserName').textContent = this.userName;
+        document.getElementById('currentUserId').textContent   = this.userId.substring(0, 16) + '…';
+    }
+
+    async createVault() {
+        const btn  = document.getElementById('createVaultBtn');
+        const type = document.getElementById('vaultType').value;
+        const name = type === 'public'
+            ? document.getElementById('vaultName').value.trim()
+            : 'Private Chat';
+
+        this.showVaultError('');
+
+        if (type === 'public' && !name) {
+            this.showVaultError('Please enter a vault name for public vaults.');
+            return;
+        }
+
+        btn.disabled    = true;
+        btn.textContent = 'Creating…';
+
+        try {
+            
+            const vaultKeys = await this.cry.generateX25519KeyPair();
+            const vaultId   = 'vault_' + Date.now() + '_' + Math.random().toString(36).substr(2, 12);
+
+            const vault = {
+                id:        vaultId,
+                name,
+                type,
+                xpub:      vaultKeys.publicKeyB64,
+                xpriv:     vaultKeys.privateKeyB64,
+                createdAt: Date.now(),
+                joinedAt:  Date.now(),
+            };
+
+            const tokenData = { id: vault.id, name: vault.name, type: vault.type, xpub: vault.xpub, xpriv: vault.xpriv };
+            vault.token = 'RRv1_' + this._encodeToken(tokenData);
+
+            await this.saveVault(vault);
+
+            const createResp = await this.apiCall('vault_create', { vaultId, vaultType: type });
+            if (!createResp.success) {
+                
+                console.warn('Server vault_create failed:', createResp.error);
+                this.showVaultError(
+                    '⚠ Vault saved locally but server registration failed: ' +
+                    (createResp.error || 'unreachable') +
+                    '. Start your relay server to enable multi-device sync.'
+                );
+                
+                await this.joinVaultInternal(vault, false  );
+                return;
+            }
+
+            const joinResp = await this.apiCall('vault_join', { vaultId: vault.id, userId: this.userId, vaultType: vault.type });
+            if (!joinResp.success) {
+                console.warn('Server vault_join failed:', joinResp.error);
+            }
+
+            await this.joinVaultInternal(vault, true);
+
+        } catch(e) {
+            console.error('createVault error:', e);
+            this.showVaultError('Vault creation error: ' + e.message);
+        } finally {
+            btn.disabled    = false;
+            btn.textContent = 'Create Vault';
+        }
+    }
+
+    _encodeToken(tokenData) {
+        try {
+            
+            return btoa(unescape(encodeURIComponent(JSON.stringify(tokenData))));
+        } catch(e) {
+            
+            return btoa(JSON.stringify(tokenData));
+        }
+    }
+
+    _decodeToken(raw) {
+        try {
+            return JSON.parse(decodeURIComponent(escape(atob(raw))));
+        } catch(_) {
+            try { return JSON.parse(atob(raw)); } catch(_) { return null; }
+        }
+    }
+
+    async joinVault() {
+        const raw = document.getElementById('joinVaultId').value.trim();
+        this.showVaultError('');
+        if (!raw) { this.showVaultError('Please paste a vault invite token.'); return; }
+
+        let tokenData;
+
+        if (raw.startsWith('RRv1_')) {
+            tokenData = this._decodeToken(raw.slice(5));
+            if (!tokenData || !tokenData.id) {
+                this.showVaultError('Invalid vault token — could not parse.');
+                return;
+            }
+        } else {
+            const existing = await this.getVault(raw);
+            if (existing) {
+                await this.reJoinOnServer(existing);
+                await this.joinVaultInternal(existing, true);
+                return;
+            }
+            this.showVaultError('Invalid token. Vault invite tokens start with "RRv1_".');
+            return;
+        }
+
+        const existing = await this.getVault(tokenData.id);
+        if (existing) {
+            await this.reJoinOnServer(existing);
+            await this.joinVaultInternal(existing, true);
+            return;
+        }
+
+        const vault = { ...tokenData, token: raw, joinedAt: Date.now() };
+
+        const btn = document.getElementById('joinVaultBtn');
+        btn.disabled    = true;
+        btn.textContent = 'Joining…';
+
+        try {
+            const joinResp = await this.apiCall('vault_join', { vaultId: vault.id, userId: this.userId, vaultType: vault.type });
+
+            if (!joinResp.success) {
+                this.showVaultError('Failed to join vault: ' + (joinResp.error || 'Server unreachable. Make sure the relay is running.'));
+                return;
+            }
+
+            await this.saveVault(vault);
+            await this.joinVaultInternal(vault, true);
+        } catch(e) {
+            console.error('joinVault error:', e);
+            this.showVaultError('Join error: ' + e.message);
+        } finally {
+            btn.disabled    = false;
+            btn.textContent = 'Join Vault';
+        }
+    }
+
+    async reJoinOnServer(vault) {
+        try {
+            await this.apiCall('vault_join', { vaultId: vault.id, userId: this.userId, vaultType: vault.type });
+        } catch(e) {
+            console.warn('reJoinOnServer error (non-fatal):', e);
+        }
+    }
+
+    async joinVaultInternal(vault, syncWithServer = true) {
+        this.currentVault      = vault;
+        this.seenMsgIds        = new Set();
+        this.lastSyncTimestamp = 0;
+
+        this.showScreen('chat');
+
+        document.getElementById('currentVaultName').textContent  = vault.name;
+        document.getElementById('displayVaultId').textContent    = vault.id;
+        document.getElementById('displayVaultToken').textContent = vault.token || '';
+        document.getElementById('vaultStatus').textContent =
+            'Type: ' + (vault.type === 'private' ? 'Private (2 people max)' : 'Public');
+        document.getElementById('participants').textContent = '—';
+
+        await this.loadMessages();
+
+        if (syncWithServer) {
+            await this.updateParticipantCount();
+        }
+
+        this.startPolling();
+    }
+
+    async sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text  = input.value.trim();
+        if (!text || !this.currentVault) return;
+
+        const sendBtn = document.getElementById('sendMessage');
+        sendBtn.disabled = true;
+
+        try {
+            const msgId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+            const plaintext = JSON.stringify({
+                id:        msgId,
+                userId:    this.userId,
+                userName:  this.userName,
+                text,
+                timestamp: Date.now(),
+            });
+
+            const blob = await this.cry.encryptMessage(
+                this.currentVault.xpub,
+                plaintext,
+                this.identityPrivateKey,
+                this.identityPublicKeyB64
+            );
+
+            const wireMsg = { id: msgId, vaultId: this.currentVault.id, blob: JSON.stringify(blob) };
+            const response = await this.apiCall('message', wireMsg);
+
+            if (response.success && response.timestamp) {
+                wireMsg.timestamp = response.timestamp;
+                await this.saveMessage(wireMsg);
+
+                const parsed     = JSON.parse(plaintext);
+                parsed.timestamp = response.timestamp;
+                parsed.verified  = true;
+                this.seenMsgIds.add(msgId);
+                this.displayMessage(parsed);
+
+                await this.acknowledgeMessages([msgId]);
+                input.value = '';
+
+                this.pollForMessages();
+            } else {
+                alert('Send failed: ' + (response.error || 'Unknown error'));
+            }
+        } catch(e) {
+            console.error('sendMessage error:', e);
+            alert('Send error: ' + e.message);
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    async loadMessages() {
+        try {
+            const msgs      = await this.getMessages(this.currentVault.id);
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+
+            msgs.sort((a, b) => a.timestamp - b.timestamp);
+
+            if (msgs.length === 0) {
+                container.innerHTML = '<div class="loading">No messages yet. Be the first!</div>';
+            }
+
+            const toAck = [];
+            for (const m of msgs) {
+                if (this.seenMsgIds.has(m.id)) continue;
+
+                let blobObj;
+                try { blobObj = JSON.parse(m.blob); } catch(_) { continue; }
+
+                const result = await this.cry.decryptMessage(this.currentVault.xpriv, blobObj);
+                if (!result) continue;
+
+                const parsed     = JSON.parse(result.plaintext);
+                parsed.verified  = result.verified;
+                parsed.timestamp = m.timestamp;
+                this.seenMsgIds.add(parsed.id);
+                this.displayMessage(parsed);
+                toAck.push(m.id);
+
+                if (m.timestamp > this.lastSyncTimestamp) {
+                    this.lastSyncTimestamp = m.timestamp;
+                }
+            }
+
+            if (toAck.length > 0) await this.acknowledgeMessages(toAck);
+        } catch(e) {
+            console.error('loadMessages error:', e);
+        }
+    }
+
+    displayMessage(msg) {
+        const container = document.getElementById('messages');
+        const loading   = container.querySelector('.loading');
+        if (loading) loading.remove();
+
+        const div     = document.createElement('div');
+        div.className = 'message';
+        const time    = new Date(msg.timestamp).toLocaleString();
+        const tick    = msg.verified ? '✓' : '⚠';
+        const shortId = msg.userId ? msg.userId.substring(0, 20) + '…' : '';
+        div.innerHTML = `
+            <div class="message-header">
+                <span>
+                    <span style="font-weight:bold;">${this.escapeHtml(msg.userName)} ${tick}</span><br>
+                    <span style="font-size:10px; color:#aaa; font-family:monospace;">${this.escapeHtml(shortId)}</span>
+                </span>
+                <span>${time}</span>
+            </div>
+            <div class="message-content">${this.escapeHtml(msg.text)}</div>`;
+
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async pollForMessages() {
+        if (!this.currentVault) return;
+
+        if (this._pollInFlight) return;
+        this._pollInFlight = true;
+
+        try {
+            const response = await this.apiCall('get_messages', {
+                vaultId: this.currentVault.id,
+                since:   this.lastSyncTimestamp,
+            });
+
+            if (!response.success || !response.data) return;
+
+            if (typeof response.participantCount === 'number') {
+                document.getElementById('participants').textContent = response.participantCount;
+            }
+
+            const toAck = [];
+            for (const m of response.data) {
+                
+                if (m.timestamp > this.lastSyncTimestamp) {
+                    this.lastSyncTimestamp = m.timestamp;
+                }
+
+                if (this.seenMsgIds.has(m.id)) continue;
+
+                let blobObj;
+                try { blobObj = JSON.parse(m.blob); } catch(_) { continue; }
+
+                const result = await this.cry.decryptMessage(this.currentVault.xpriv, blobObj);
+                if (!result) continue;
+
+                const parsed     = JSON.parse(result.plaintext);
+                parsed.verified  = result.verified;
+                parsed.timestamp = m.timestamp;
+                this.seenMsgIds.add(parsed.id);
+
+                await this.saveMessage(m);
+                this.displayMessage(parsed);
+                toAck.push(m.id);
+            }
+
+            if (toAck.length > 0) await this.acknowledgeMessages(toAck);
+
+        } catch(e) {
+            console.error('poll error:', e);
+        } finally {
+            this._pollInFlight = false;
+        }
+    }
+
+    async acknowledgeMessages(messageIds) {
+        if (!this.currentVault || messageIds.length === 0) return;
+        try {
+            await this.apiCall('ack_messages', {
+                vaultId:    this.currentVault.id,
+                messageIds,
+                userId:     this.userId,
+            });
+        } catch(e) {
+            console.warn('ack error (non-fatal):', e);
+        }
+    }
+
+    async updateParticipantCount() {
+        if (!this.currentVault) return;
+        try {
+            const response = await this.apiCall('get_participant_count', { vaultId: this.currentVault.id });
+            if (response.success && typeof response.participantCount === 'number') {
+                document.getElementById('participants').textContent = response.participantCount;
+            }
+        } catch(e) {
+            console.warn('participantCount error (non-fatal):', e);
+        }
+    }
+
+    startPolling() {
+        this.stopPolling();
+        
+        this.pollInterval = setInterval(() => this.pollForMessages(), 2000);
+    }
+
+    stopPolling() {
+        if (this.pollInterval) { clearInterval(this.pollInterval); this.pollInterval = null; }
+    }
+
+    async leaveVaultSession() {
+        this.stopPolling();
+        this.currentVault      = null;
+        this.lastSyncTimestamp = 0;
+        this.seenMsgIds        = new Set();
+        this._pollInFlight     = false;
+        this.showScreen('main');
+    }
+
+    confirmNuke() {
+        this.showModal(
+            '☢ FINAL WARNING: NUKE CONFIRMATION',
+            'You are about to PERMANENTLY DELETE:\n\n' +
+            '• Your identity keys and user ID\n' +
+            '• All vault memberships and encryption keys\n' +
+            '• All locally stored messages (IndexedDB)\n' +
+            '• All vault data from relay servers\n\n' +
+            'This CANNOT BE UNDONE.\n' +
+            'You will need to create a completely new identity.',
+            'nuke'
+        );
+    }
+
+    async executeNuke() {
+        const progress = document.getElementById('nukeProgress');
+        const btns     = document.getElementById('confirmBtns');
+        btns.style.display = 'none';
+        progress.className = 'nuke-progress visible';
+
+        const log = (msg) => {
+            progress.textContent += msg + '\n';
+            progress.scrollTop    = progress.scrollHeight;
+        };
+
+        try {
+            log('[ 1/5 ] Gathering vault list…');
+            const vaults   = await this.getAllVaults();
+            const vaultIds = vaults.map(v => v.id);
+
+            log(`[ 2/5 ] Wiping ${vaultIds.length} vault(s) from relay server(s)…`);
+            if (vaultIds.length > 0) {
+                
+                await this.apiCall('nuke_user', { vaultIds, userId: this.userId });
+                log('        Done.');
+            } else {
+                log('        No vaults to wipe.');
+            }
+
+            log('[ 3/5 ] Stopping sessions…');
+            this.stopPolling();
+
+            log('[ 4/5 ] Deleting IndexedDB…');
+            if (this.db) { this.db.close(); this.db = null; }
+
+            await new Promise((resolve) => {
+                const req    = indexedDB.deleteDatabase('RedRabbitDB');
+                req.onsuccess  = () => resolve();
+                req.onerror    = () => resolve();
+                req.onblocked  = () => { log('        (DB blocked — continuing)'); resolve(); };
+            });
+
+            log('[ 5/5 ] Clearing browser storage…');
+            try { localStorage.clear(); }   catch(_) {}
+            try { sessionStorage.clear(); } catch(_) {}
+
+            log('\n✓ NUKE COMPLETE. Reloading in 2s…');
+            await new Promise(r => setTimeout(r, 2000));
+            location.reload();
+
+        } catch(e) {
+            console.error('nuke error:', e);
+            log('\n✗ Error: ' + e.message);
+            log('  Please clear browser data manually (IndexedDB + localStorage).');
+            await new Promise(r => setTimeout(r, 3000));
+            location.reload();
+        }
+    }
+
+    async apiCall(type, data = {}) {
+        if (!this.servers || !this.servers.length) {
+            return { success: false, error: 'No relay servers configured.' };
+        }
+
+        const results = await Promise.all(this.servers.map(srv =>
+            fetch(srv + '/api', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ type, ...data }),
+            })
+            .then(r => r.json())
+            .catch(err => ({ success: false, error: err.message || 'unreachable' }))
+        ));
+
+        return results.find(r => r.success) || results[0] || { success: false, error: 'all servers failed' };
+    }
+
+    _tx(stores, mode = 'readonly') {
+        if (!this.db) throw new Error('Database not available. Please reload the page.');
+        return this.db.transaction(stores, mode);
+    }
+
+    saveMessage(msg) {
+        return new Promise((res, rej) => {
+            try {
+                const tx = this._tx(['messages'], 'readwrite');
+                tx.objectStore('messages').put(msg);
+                tx.oncomplete = () => res();
+                tx.onerror    = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    getMessages(vaultId) {
+        return new Promise((res, rej) => {
+            try {
+                const tx  = this._tx(['messages']);
+                const req = tx.objectStore('messages').index('vault').getAll(vaultId);
+                req.onsuccess = () => res(req.result || []);
+                req.onerror   = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    saveVault(vault) {
+        return new Promise((res, rej) => {
+            try {
+                const tx = this._tx(['vaults'], 'readwrite');
+                tx.objectStore('vaults').put(vault);
+                tx.oncomplete = () => res();
+                tx.onerror    = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    getVault(id) {
+        return new Promise((res, rej) => {
+            try {
+                const tx  = this._tx(['vaults']);
+                const req = tx.objectStore('vaults').get(id);
+                req.onsuccess = () => res(req.result || null);
+                req.onerror   = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    getAllVaults() {
+        return new Promise((res, rej) => {
+            try {
+                const tx  = this._tx(['vaults']);
+                const req = tx.objectStore('vaults').getAll();
+                req.onsuccess = () => res(req.result || []);
+                req.onerror   = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    deleteVault(id) {
+        return new Promise((res, rej) => {
+            try {
+                const tx = this._tx(['vaults'], 'readwrite');
+                tx.objectStore('vaults').delete(id);
+                tx.oncomplete = () => res();
+                tx.onerror    = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    saveUser(user) {
+        return new Promise((res, rej) => {
+            try {
+                const tx = this._tx(['user'], 'readwrite');
+                tx.objectStore('user').put(user);
+                tx.oncomplete = () => res();
+                tx.onerror    = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    getStoredUser() {
+        return new Promise((res, rej) => {
+            try {
+                const tx     = this._tx(['user']);
+                const allReq = tx.objectStore('user').getAll();
+                allReq.onsuccess = () => res(allReq.result && allReq.result[0] || null);
+                allReq.onerror   = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    saveSetting(key, value) {
+        return new Promise((res, rej) => {
+            try {
+                const tx = this._tx(['settings'], 'readwrite');
+                tx.objectStore('settings').put({ key, value });
+                tx.oncomplete = () => res();
+                tx.onerror    = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    getSetting(key) {
+        return new Promise((res, rej) => {
+            try {
+                const tx  = this._tx(['settings']);
+                const req = tx.objectStore('settings').get(key);
+                req.onsuccess = () => res(req.result ? req.result.value : null);
+                req.onerror   = (e) => rej(e.target.error);
+            } catch(e) { rej(e); }
+        });
+    }
+
+    async loadServers() {
+        try {
+            const saved = await this.getSetting('servers');
+            if (saved) {
+                this.servers = saved.split('\n').map(s => s.trim()).filter(Boolean);
+            } else {
+                
+                const ls = localStorage.getItem('rr_servers');
+                if (ls) {
+                    this.servers = ls.split('\n').map(s => s.trim()).filter(Boolean);
+                    await this.saveSetting('servers', this.servers.join('\n'));
+                    localStorage.removeItem('rr_servers');
+                }
+            }
+        } catch(e) {
+            console.warn('loadServers error (using default):', e);
+        }
+
+        if (!this.servers.length) this.servers = ['http://localhost:3000'];
+
+        const ta = document.getElementById('serverUrls');
+        if (ta) ta.value = this.servers.join('\n');
+        this.updateServerList();
+    }
+
+    updateServerList() {
+        const c = document.getElementById('serverList');
+        if (!c) return;
+        c.innerHTML = '';
+        this.servers.forEach((srv, i) => {
+            const d = document.createElement('div');
+            d.className = 'server-item';
+            d.innerHTML = `<span>${this.escapeHtml(srv)}</span>
+                <button onclick="app.removeServer(${i})"
+                    style="padding:2px 6px; font-size:12px;">×</button>`;
+            c.appendChild(d);
+        });
+    }
+
+    async addServer() {
+        const input = document.getElementById('newServerUrl');
+        const url   = input.value.trim();
+        if (url && !this.servers.includes(url)) {
+            this.servers.push(url);
+            try { await this.saveSetting('servers', this.servers.join('\n')); } catch(_) {}
+            this.updateServerList();
+            input.value = '';
+        }
+    }
+
+    async removeServer(i) {
+        this.servers.splice(i, 1);
+        try { await this.saveSetting('servers', this.servers.join('\n')); } catch(_) {}
+        this.updateServerList();
+    }
+
+    switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById(tab + 'Tab').classList.remove('hidden');
+    }
+
+    async loadVaults() {
+        try {
+            const vaults = await this.getAllVaults();
+            const c      = document.getElementById('vaultList');
+            c.innerHTML  = '';
+
+            if (!vaults.length) {
+                c.innerHTML = '<p class="status">No vaults yet. Create or join one above.</p>';
+                return;
+            }
+
+            vaults.forEach(v => {
+                const d = document.createElement('div');
+                d.className = 'message';
+                d.innerHTML = `
+                    <div class="message-header">
+                        <span>${this.escapeHtml(v.name)}</span>
+                        <span>${v.type === 'private' ? '🔒 Private' : '🌐 Public'}</span>
+                    </div>
+                    <div class="message-content">
+                        <p style="font-size:11px; color:#999; margin-bottom:6px;">
+                            ${v.id.substring(0, 28)}…
+                        </p>
+                        <button onclick="app.openLocalVault('${v.id}')"
+                            style="margin-top:2px;">Open</button>
+                    </div>`;
+                c.appendChild(d);
+            });
+        } catch(e) {
+            console.error('loadVaults error:', e);
+        }
+    }
+
+    async openLocalVault(vaultId) {
+        try {
+            const vault = await this.getVault(vaultId);
+            if (!vault) { alert('Vault not found locally.'); return; }
+            await this.reJoinOnServer(vault);
+            await this.joinVaultInternal(vault, true);
+        } catch(e) {
+            console.error('openLocalVault error:', e);
+            alert('Error opening vault: ' + e.message);
+        }
+    }
+
+    showModal(title, message, action) {
+        this.pendingAction = action;
+        document.getElementById('confirmTitle').textContent    = title;
+        document.getElementById('confirmMessage').textContent  = message;
+        document.getElementById('confirmBtns').style.display   = 'flex';
+        document.getElementById('nukeProgress').className      = 'nuke-progress';
+        document.getElementById('nukeProgress').textContent    = '';
+        document.getElementById('confirmModal').classList.add('active');
+    }
+
+    hideModal() {
+        document.getElementById('confirmModal').classList.remove('active');
+        this.pendingAction = null;
+        document.getElementById('nukeNote').classList.add('hidden');
+    }
+
+    executeConfirmedAction() {
+        if (this.pendingAction === 'nuke') { this.executeNuke(); return; }
+        this.hideModal();
+    }
+
+    escapeHtml(text) {
+        const d = document.createElement('div');
+        d.textContent = String(text || '');
+        return d.innerHTML;
+    }
+}
+
+const app = new RedRabbit();
+window.app = app;
+</script>
+</body>
+</html>
