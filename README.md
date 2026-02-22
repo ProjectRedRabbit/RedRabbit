@@ -255,4 +255,6 @@ The next release will aim to harden encryption.
 Cross server handshake protocol.(So two people on diffrent servers can also comunicate)(Will also fix the problem of vaults private key sent over with invite token).
 Voice and video calls over WebRTC for private vaults.
 Make it less intimidating for less technical users.
+Chanel vaults(Vaults where any number of people can join but only the person who made the vault and the people he makes as co-admins can post/message).
+As the server network becomes strong,will add the ability to send files/photos.
 Make server as light weight as possible.
