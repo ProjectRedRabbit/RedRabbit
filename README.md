@@ -1,6 +1,8 @@
 # RedRabbit.
 
-A browser-based encrypted messaging app. No accounts, no phone numbers, no servers that can read your messages. You open the HTML file, pick a name, create a vault, share the invite token with someone, and talk. That's it.
+**If they can read it, it isn’t yours.**
+
+A browser-based single html file encrypted messaging app. No accounts, no phone numbers, no servers that can read your messages. You open the HTML file, pick a name, create a vault, share the invite token with someone, and talk. That's it.
 
 The relay server is genuinely blind — it stores encrypted blobs and nothing else. It has no way to decrypt messages, identify users, or link anything to a real person. Even if you handed over the server and its entire contents, nobody could read a single message.
 
@@ -204,10 +206,44 @@ If you want redundancy or want to split load across servers, you can add multipl
 
 ## Security notes worth knowing
 
-**The invite token contains the vault's private key.** Whoever has the token can decrypt all messages in that vault — past and future. Treat it like a password. Don't post it somewhere public, don't send it over an insecure channel.
+**The invite token contains the vault's private key.** Whoever has the token can decrypt all messages in that vault — past and future. Treat it like a password. Don't post it somewhere public, don't send it over an insecure channel.(This will be changes in next release when the protocol for cross server handshake will be finalized,till then be careful while sharing it).
 
 **Forward secrecy is per-message.** Each message uses a fresh ephemeral X25519 keypair. Compromising the vault's long-term key doesn't expose past messages, but the vault key is in the invite token, so see above.
 
-**The server can see metadata.** It can't read messages but it does see vault IDs, blob sizes, timestamps, and how many participants a vault has. If that's a concern, HTTPS helps with the transit side, but the server will always have some metadata.
+**The server can see metadata.** It can't read messages but it does see vault IDs, blob sizes, timestamps, and how many participants a vault has. If that's a concern, HTTPS helps with the transit side, but the server will always have some metadata.(Its adviced to use vpn/tor if you want even more privacy).
 
-**Identity keys live in IndexedDB.** Clearing your browser data deletes your identity and you can't recover it. Export or back up your keys if you care about long-term access. There's no recovery mechanism.
+**Identity keys live in IndexedDB.** Clearing your browser data deletes your identity and you can't recover it. Export or back up your keys if you care about long-term access. There's no recovery mechanism.(Next release will have indexDB data protection from malacious XSS attacks).
+
+---
+
+**Invisible by design. Unstoppable by nature.**
+The main reason to design the main app as single html file is so that it can not be prevented/censored by anyone or many.
+The app is not hypocrite and for the same reason complete code is open source and anyone can audit it.Anyone can host there own server and can start using it.The project will forever remain free and open source.
+The app is made for only one reason and it is to oppose survailence as **Privacy is not an option**.
+
+---
+
+**What the project needs:**
+We right now need support as we are also working on 2 crypto projects along with this project.One is a protocol over Bitcoin network and another is a contract on Ethereum(PS Scalar Drift protocol).About it will be disscused in near future.We also want to host a server of the project on the tor network.So we really appreaciate donation.
+
+**Bitcoin**
+[bc1qj5rg8wtg8e5ksacj43pe7nyqmaewkncq75jlr8](bitcoin:bc1qj5rg8wtg8e5ksacj43pe7nyqmaewkncq75jlr8)
+
+**Ethereum**
+[0xfc696a5f83b36860e43d15b979bb0f5326a3289d](ethereum:0xfc696a5f83b36860e43d15b979bb0f5326a3289d)
+
+**Solana**
+[31PdhUujM4EL17J9Utwdqm773eMzG9VbDxJoNaA68S96](solana:31PdhUujM4EL17J9Utwdqm773eMzG9VbDxJoNaA68S96)
+
+---
+
+To report any problem/vulnerabilities/backdoor/support contact us on
+whitepeacock@tutamail.com
+
+---
+**The next release**
+The next release will aim to harden encryption.
+Cross server handshake protocol.(So two people on diffrent servers can also comunicate)(Will also fix the problem of vaults private key sent over with invite token).
+Voice and video calls over WebRTC for private vaults.
+Make it less intimidating for less technical users.
+Make server as light weight as possible.
