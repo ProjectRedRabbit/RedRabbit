@@ -157,6 +157,15 @@ This runs `backup.js` which creates a timestamped copy of the database in the `.
 
 ---
 
+---
+
+A server for testing the app is hosted on 
+
+serverredrabbit-production.up.railway.app
+
+(Can use http://serverredrabbit-production.up.railway.app in configuration to try the app.)
+
+---
 ## Using the app
 
 ### First launch
@@ -224,7 +233,7 @@ The app is made for only one reason and it is to oppose survailence as **Privacy
 ---
 
 **What the project needs:**
-We right now need support as we are also working on 2 crypto projects along with this project.One is a protocol over Bitcoin network and another is a contract on Ethereum(PS Scalar Drift protocol).About it will be disscused in near future.We also want to host a server of the project on the tor network.So we really appreaciate donation.
+RedRabbit will always be free. If you want to help keep it alive — we're working on hosting a dedicated server on the Tor network so the app remains accessible even in places where the clearnet version might get blocked.Also to host as many free servers as possible(We will add the server urls here itself). That costs money. If this project is useful to you or you just believe in what it's trying to do, a small donation goes a long way.We will try to host as many servers as possible from our side.
 
 **Bitcoin**
 [bc1qj5rg8wtg8e5ksacj43pe7nyqmaewkncq75jlr8](bitcoin:bc1qj5rg8wtg8e5ksacj43pe7nyqmaewkncq75jlr8)
@@ -241,7 +250,7 @@ To report any problem/vulnerabilities/backdoor/support contact us on
 whitepeacock@tutamail.com
 
 ---
-**The next release**
+## Whats next:
 The next release will aim to harden encryption.
 Cross server handshake protocol.(So two people on diffrent servers can also comunicate)(Will also fix the problem of vaults private key sent over with invite token).
 Voice and video calls over WebRTC for private vaults.
